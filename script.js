@@ -54,10 +54,10 @@ class Ball {
     ctx.closePath();
   }
 
-  intersects(x2, y2) {
+  overlaps(x2, y2) {
     var dx = this.x - x2;
     var dy = this.y - y2;
-    return Math.sqrt(dx ** 2 + dy ** 2) < this.radius;
+    return Math.sqrt(dx ** 2 + dy ** 2) < this.radius * 1.25;
   }
 }
 
@@ -96,7 +96,7 @@ CANVAS.addEventListener('click', (event) => {
   var clickY = event.clientY - rect.top;
   var originalBallsLength = balls.length;
 
-  balls = balls.filter((ball) => !ball.intersects(clickX, clickY));
+  balls = balls.filter((ball) => !ball.overlaps(clickX, clickY));
 
   if (balls.length == originalBallsLength) createBall(clickX, clickY);
 });
