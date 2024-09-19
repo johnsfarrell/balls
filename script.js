@@ -65,8 +65,8 @@ class Ball {
 let balls = [];
 
 // constant variables
-const CANVAS = document.getElementById("balls-canvas");
-const CTX = CANVAS.getContext("2d");
+const CANVAS = document.getElementById('balls-canvas');
+const CTX = CANVAS.getContext('2d');
 
 // set canvas to size of window
 CANVAS.width = window.innerWidth;
@@ -87,10 +87,10 @@ const createBall = (x, y) => {
  * @returns {string} Random color in hex format (#RRGGBB)
  */
 const randomColor = () => {
-  return "#" + ((Math.random() * 0xffffff) << 0).toString(16).padStart(6, "0");
+  return '#' + ((Math.random() * 0xffffff) << 0).toString(16).padStart(6, '0');
 };
 
-CANVAS.addEventListener("click", (event) => {
+CANVAS.addEventListener('click', (event) => {
   var rect = CANVAS.getBoundingClientRect();
   var clickX = event.clientX - rect.left;
   var clickY = event.clientY - rect.top;
