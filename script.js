@@ -11,7 +11,6 @@ class Ball {
     this.vx = vx;
     this.vy = vy;
     this.radius = radius;
-    this.gravity = 0.2 * radius;
     this.color = color;
     this.canvas = document.getElementById('balls-canvas');
   }
