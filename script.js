@@ -5,12 +5,13 @@
  */
 
 class Ball {
-  constructor(x, y, vx, vy, radius, color) {
+  constructor(x, y, vx, vy, radius, color, gravity) {
     this.x = x;
     this.y = y;
     this.vx = vx;
     this.vy = vy;
     this.radius = radius;
+    this.gravity = gravity;
     this.color = color;
     this.canvas = document.getElementById('balls-canvas');
   }
@@ -47,7 +48,7 @@ class Ball {
    */
   update() {
     this.x += this.vx;
-    this.vy += 0.2;
+    this.vy += this.gravity;
     this.y += this.vy;
     this.wallCollision();
   }
@@ -93,15 +94,14 @@ class App {
     this.createBall();
     this.animate();
 
-    document.addEventListener('click', ({ clientX, clientY }) => {
-      const deleteCount = this.deleteBalls(clientX, clientY);
-      if (!deleteCount) this.createBall(clientX, clientY);
-    });
+    /** click events: remove if clicked on ball, add if clicked on canvas */
+    document.onclick = ({ clientX, clientY }) => {
+      !this.deleteBalls(clientX, clientY) && this.createBall(clientX, clientY);
+    };
 
-    document.onkeydown = (event) => {
-      if (event.key === ' ') {
-        for (var i = 0; i < 500; i++) this.createBall();
-      }
+    /** key clicks: add n balls on spacebar */
+    document.onkeydown = ({ key }) => {
+      key === ' ' && this.createMultipleBalls();
     };
   }
 
@@ -116,7 +116,21 @@ class App {
     var vx = (Math.random() - 0.5) * 12;
     var vy = (Math.random() + 0.5) * -6;
     var color = this.randomColor();
-    this.balls.push(new Ball(x, y, vx, vy, radius, color));
+    var gravity = 0.25;
+    this.balls.push(new Ball(x, y, vx, vy, radius, color, gravity));
+  }
+
+  /**
+   * Creates n balls at random positions on the canvas
+   * @param {int} n - number of balls to create
+   */
+  createMultipleBalls(n = 10) {
+    Array.from({ length: n }).forEach(() =>
+      this.createBall(
+        Math.random() * this.canvas.width,
+        Math.random() * this.canvas.height
+      )
+    );
   }
 
   /**
@@ -128,7 +142,8 @@ class App {
   deleteBalls(x, y) {
     const oldBallsLength = this.balls.length;
     this.balls = this.balls.filter((ball) => !ball.overlaps(x, y));
-    return oldBallsLength - this.balls.length;
+    const deletedCount = oldBallsLength - this.balls.length;
+    return deletedCount;
   }
 
   /**
