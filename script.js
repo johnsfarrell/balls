@@ -176,7 +176,8 @@ class App {
   drawDebug() {
     this.ctx.font = '12px monospace';
     this.ctx.fillStyle = '#000000';
-    const text = `FPS: ${this.fps.toFixed(2)}, Balls: ${this.balls.length}`;
+    const formattedFPS = this.fps.toFixed(2).padStart(5, '0');
+    const text = `FPS: ${formattedFPS}, Balls: ${this.balls.length}`;
     this.ctx.fillText(text, 10, 20);
   }
 
