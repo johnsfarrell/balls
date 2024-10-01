@@ -13,18 +13,17 @@ class Ball {
     this.radius = radius;
     this.gravity = gravity;
     this.color = color;
-    this.canvas = document.getElementById('balls-canvas');
   }
 
   /**
    * Checks if the ball has collided with the walls of the canvas
    * If it has, updates the position and velocity of the ball
    */
-  wallCollision() {
+  wallCollision(canvas) {
     // right wall
-    if (this.x + this.radius > this.canvas.width) {
+    if (this.x + this.radius > canvas.width) {
       this.vx = -this.vx;
-      this.x = this.canvas.width - this.radius;
+      this.x = canvas.width - this.radius;
     }
     // left wall
     if (this.x - this.radius < 0) {
@@ -32,9 +31,9 @@ class Ball {
       this.x = this.radius;
     }
     // bottom wall
-    if (this.y + this.radius > this.canvas.height) {
+    if (this.y + this.radius > canvas.height) {
       this.vy = -this.vy;
-      this.y = this.canvas.height - this.radius;
+      this.y = canvas.height - this.radius;
     }
     // top wall
     if (this.y - this.radius < 0) {
@@ -46,23 +45,11 @@ class Ball {
   /**
    * Updates the position and velocity of the ball
    */
-  update() {
+  update(canvas) {
     this.x += this.vx;
     this.vy += this.gravity;
     this.y += this.vy;
-    this.wallCollision();
-  }
-
-  /**
-   * Draws the ball on the canvas
-   * @param {CanvasRenderingContext2D} ctx - The 2D rendering context for the canvas
-   */
-  draw(ctx) {
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-    ctx.fillStyle = this.color;
-    ctx.fill();
-    ctx.closePath();
+    this.wallCollision(canvas);
   }
 
   /**
@@ -120,6 +107,18 @@ class App {
     var color = this.randomColor();
     var gravity = 0.25;
     this.balls.push(new Ball(x, y, vx, vy, radius, color, gravity));
+  }
+
+  /**
+   * Draws the ball on the canvas
+   * @param {Ball} ball - The ball to draw on the canvas
+   */
+  drawBall(ball) {
+    this.ctx.beginPath();
+    this.ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+    this.ctx.fillStyle = ball.color;
+    this.ctx.fill();
+    this.ctx.closePath();
   }
 
   /**
@@ -186,8 +185,8 @@ class App {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
     this.balls.forEach((ball) => {
-      ball.update(this.ctx);
-      ball.draw(this.ctx);
+      ball.update(this.canvas);
+      this.drawBall(ball);
     });
 
     this.updateFPS(timestamp);
