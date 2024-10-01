@@ -74,6 +74,7 @@ class App {
     this.canvas.height = window.innerHeight;
     this.lastFrameTime = 0;
     this.fps = 0;
+    this.maxBalls = 5000;
   }
 
   /**
@@ -100,12 +101,14 @@ class App {
    * @param {*} y - y coordinate of the ball
    */
   createBall(x = this.canvas.width / 2, y = this.canvas.height / 2) {
-    // creates new ball and adds to list of balls
+    if (this.balls.length >= this.maxBalls) return;
+
     var radius = 10 + (Math.random() + 0.5) * 20;
     var vx = (Math.random() - 0.5) * 12;
     var vy = (Math.random() + 0.5) * -6;
     var color = this.randomColor();
     var gravity = 0.25;
+
     this.balls.push(new Ball(x, y, vx, vy, radius, color, gravity));
   }
 
