@@ -85,6 +85,8 @@ class App {
     this.ctx = this.canvas.getContext('2d');
     this.canvas.width = window.innerWidth;
     this.canvas.height = window.innerHeight;
+    this.lastFrameTime = 0;
+    this.fps = 0;
   }
 
   /**
@@ -158,15 +160,38 @@ class App {
   }
 
   /**
-   * Animates the balls on the canvas
+   * Updates the frames per second
+   * @param {double} timestamp - The current time in milliseconds
    */
-  animate() {
+  updateFPS(timestamp = 0) {
+    this.fps = 1000 / (timestamp - this.lastFrameTime);
+    this.lastFrameTime = timestamp;
+  }
+
+  /**
+   * Draws the frames per second and number of balls on the canvas
+   */
+  drawDebug() {
+    this.ctx.font = '12px monospace';
+    this.ctx.fillStyle = '#000000';
+    const text = `FPS: ${this.fps.toFixed(2)}, Balls: ${this.balls.length}`;
+    this.ctx.fillText(text, 10, 20);
+  }
+
+  /**
+   * Animates the balls on the canvas
+   * @param {double} timestamp - The current time in milliseconds
+   */
+  animate(timestamp = 0) {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
     this.balls.forEach((ball) => {
       ball.update(this.ctx);
       ball.draw(this.ctx);
     });
+
+    this.updateFPS(timestamp);
+    this.drawDebug();
 
     requestAnimationFrame(this.animate.bind(this));
   }
