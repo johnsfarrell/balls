@@ -13,6 +13,8 @@ class Ball {
     this.radius = radius;
     this.gravity = gravity;
     this.color = color;
+    this.minRadius = 5;
+    this.maxRadius = 100;
   }
 
   /**
@@ -68,13 +70,44 @@ class Ball {
 class App {
   constructor() {
     this.balls = [];
+    this.maxBalls = 5000;
+
     this.canvas = document.getElementById('balls-canvas');
     this.ctx = this.canvas.getContext('2d');
     this.canvas.width = window.innerWidth;
     this.canvas.height = window.innerHeight;
+
     this.lastFrameTime = 0;
     this.fps = 0;
-    this.maxBalls = 5000;
+
+    this.oldPing = 0;
+    this.curPing = 0;
+    this.pingUrl = 'https://www.google.com';
+    this.pingInterval = 500;
+  }
+
+  /**
+   * Pings the given URL and logs the time (ms) it took to get a response
+   * @param {string} url - The URL to ping
+   */
+  async ping(url) {
+    try {
+      const startTime = performance.now();
+      return await fetch(url, { method: 'HEAD', mode: 'no-cors' }).then(() => {
+        const endTime = performance.now();
+        return endTime - startTime;
+      });
+    } catch (error) {
+      return 0;
+    }
+  }
+
+  /**
+   * Returns the difference between the current and old ping
+   * @returns {double} The difference between the current and old ping
+   */
+  diffPing() {
+    return this.curPing - this.oldPing;
   }
 
   /**
@@ -93,6 +126,12 @@ class App {
     document.onkeydown = ({ key }) => {
       key === ' ' && this.createMultipleBalls();
     };
+
+    setInterval(async () => {
+      let newPing = await this.ping(this.pingUrl);
+      this.oldPing = this.curPing;
+      this.curPing = newPing;
+    }, this.pingInterval);
   }
 
   /**
@@ -118,9 +157,19 @@ class App {
    */
   drawBall(ball) {
     this.ctx.beginPath();
+
+    ball.radius *= this.diffPing() >= 0 ? 1.01 : 0.99;
+    ball.radius = Math.min(ball.maxRadius, ball.radius);
+    ball.radius = Math.max(ball.minRadius, ball.radius);
+
     this.ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+    this.ctx.strokeStyle = this.diffPing() >= 0 ? '#00FF00' : '#FF0000';
+    this.ctx.lineWidth = 10;
+
+    this.ctx.stroke();
     this.ctx.fillStyle = ball.color;
     this.ctx.fill();
+
     this.ctx.closePath();
   }
 
@@ -156,9 +205,8 @@ class App {
    * @returns {string} Random color in hex format (#RRGGBB)
    */
   randomColor() {
-    return (
-      '#' + ((Math.random() * 0xffffff) << 0).toString(16).padStart(6, '0')
-    );
+    let randomHex = (Math.random() * 0xffffff) << 0;
+    return '#' + randomHex.toString(16).padStart(6, '0');
   }
 
   /**
@@ -176,8 +224,16 @@ class App {
   drawDebug() {
     this.ctx.font = '12px monospace';
     this.ctx.fillStyle = '#000000';
-    const formattedFPS = this.fps.toFixed(2).padStart(5, '0');
-    const text = `FPS: ${formattedFPS}, Balls: ${this.balls.length}`;
+
+    const formattedFPS = this.fps.toFixed(2);
+    const formattedPing = this.curPing.toFixed(2);
+
+    const ballsText = `Balls: ${this.balls.length}`;
+    const fpsText = `FPS: ${formattedFPS}`;
+    const pingText = `Ping: ${formattedPing} ms`;
+    const pingSymbol = this.diffPing() >= 0 ? '↑' : '↓';
+    const text = `${ballsText}, ${fpsText}, ${pingText} ${pingSymbol}`;
+
     this.ctx.fillText(text, 10, 20);
   }
 
