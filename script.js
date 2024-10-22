@@ -82,24 +82,17 @@ class App {
 
     this.oldPing = 0;
     this.curPing = 0;
-    this.pingUrl = 'https://www.google.com';
     this.pingInterval = 500;
-  }
 
-  /**
-   * Pings the given URL and logs the time (ms) it took to get a response
-   * @param {string} url - The URL to ping
-   */
-  async ping(url) {
-    try {
-      const startTime = performance.now();
-      return await fetch(url, { method: 'HEAD', mode: 'no-cors' }).then(() => {
-        const endTime = performance.now();
-        return endTime - startTime;
-      });
-    } catch (error) {
-      return 0;
-    }
+    this.oldUpload = 0;
+    this.curUpload = 0;
+    this.uploadInterval = 1000;
+
+    this.oldDownload = 0;
+    this.curDownload = 0;
+    this.downloadInterval = 1000;
+
+    this.network = new Network();
   }
 
   /**
@@ -127,11 +120,28 @@ class App {
       key === ' ' && this.createMultipleBalls();
     };
 
+    /** intervals: async network processes to do things on the program */
     setInterval(async () => {
-      let newPing = await this.ping(this.pingUrl);
+      let newPing = await this.network.ping();
       this.oldPing = this.curPing;
       this.curPing = newPing;
     }, this.pingInterval);
+
+    setInterval(async () => {
+      let newUpload = await this.network.upload(64 * 64 * 8);
+      this.oldUpload = this.curUpload;
+      this.curUpload = newUpload;
+
+      this.curUpload > this.oldUpload ? this.createBall() : this.popBall();
+    }, this.uploadInterval);
+
+    setInterval(async () => {
+      let newDownload = await this.network.download(64 * 64 * 8);
+      this.oldDownload = this.curDownload;
+      this.curDownload = newDownload;
+
+      this.curDownload > this.oldDownload ? this.createBall() : this.popBall();
+    }, this.downloadInterval);
   }
 
   /**
@@ -200,6 +210,14 @@ class App {
   }
 
   /**
+   * Removes the first ball from the list of balls
+   * @returns {Ball} The first ball in the list
+   */
+  popBall() {
+    this.balls.shift();
+  }
+
+  /**
    * Generates a random color in hex format ("#RRGGBB")
    * @link https://stackoverflow.com/questions/5092808
    * @returns {string} Random color in hex format (#RRGGBB)
@@ -230,11 +248,21 @@ class App {
 
     const ballsText = `Balls: ${this.balls.length}`;
     const fpsText = `FPS: ${formattedFPS}`;
-    const pingText = `Ping: ${formattedPing} ms`;
-    const pingSymbol = this.diffPing() >= 0 ? '↑' : '↓';
-    const text = `${ballsText}, ${fpsText}, ${pingText} ${pingSymbol}`;
 
-    this.ctx.fillText(text, 10, 20);
+    const pingSymbol = this.diffPing() >= 0 ? '↑' : '↓';
+    const pingText = `Ping: ${formattedPing} ms ${pingSymbol}`;
+
+    const uploadSymbol = this.curUpload >= this.oldUpload ? '↑' : '↓';
+    const downloadSymbol = this.curDownload >= this.oldDownload ? '↑' : '↓';
+
+    const uploadText = `Upload: ${this.curUpload} kbps ${uploadSymbol}`;
+    const downloadText = `Download: ${this.curDownload} kbps ${downloadSymbol}`;
+
+    const lines = [ballsText, fpsText, pingText, uploadText, downloadText];
+
+    lines.forEach((line, i) => {
+      this.ctx.fillText(line, 10, 20 * (i + 1));
+    });
   }
 
   /**
@@ -253,5 +281,63 @@ class App {
     this.drawDebug();
 
     requestAnimationFrame(this.animate.bind(this));
+  }
+}
+
+class Network {
+  constructor() {
+    this.pingUrl = 'https://www.google.com';
+    this.uploadUrl = 'https://httpbin.org/post';
+    this.downloadUrl = 'https://httpbin.org/stream-bytes/';
+
+    this.uploadSize = 64 * 64 * 8; // 64 KB file
+    this.downloadSize = 64 * 64 * 8; // 64 KB file
+  }
+
+  /**
+   * Pings the given URL and logs the time (ms) it took to get a response
+   * @param {string} url - The URL to ping
+   */
+  async ping(url = this.pingUrl) {
+    try {
+      const startTime = performance.now();
+      return await fetch(url, { method: 'HEAD', mode: 'no-cors' }).then(() => {
+        const endTime = performance.now();
+        return endTime - startTime;
+      });
+    } catch (error) {
+      return 0;
+    }
+  }
+
+  /**
+   * Uploads the given number of bits to the server and logs the time (ms) it took to upload
+   * @param {int} numberBits - Number of bits to upload
+   * @returns - Time taken to upload the bits in milliseconds
+   */
+  async upload(numberBits = this.uploadSize) {
+    const bits = new Blob([new ArrayBuffer(numberBits)]);
+
+    const start = new Date().getTime();
+    await fetch('https://httpbin.org/post', {
+      method: 'POST',
+      body: bits
+    });
+    const end = new Date().getTime();
+
+    return end - start;
+  }
+
+  /**
+   * Downloads the given number of bits from the server and logs the time (ms) it took to download
+   * @param {int} numberBits - Number of bits to download
+   * @returns - Time taken to download the bits in milliseconds
+   */
+  async download(numberBits = this.downloadSize) {
+    const start = new Date().getTime();
+    await fetch('https://httpbin.org/stream-bytes/' + numberBits);
+    const end = new Date().getTime();
+
+    return end - start;
   }
 }
