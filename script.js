@@ -70,6 +70,8 @@ class Ball {
 class App {
   constructor() {
     this.balls = [];
+    this.networks = [];
+
     this.maxBalls = 5000;
 
     this.canvas = document.getElementById('balls-canvas');
@@ -80,34 +82,39 @@ class App {
     this.lastFrameTime = 0;
     this.fps = 0;
 
-    this.oldPing = 0;
-    this.curPing = 0;
-    this.pingInterval = 500;
-
-    this.oldUpload = 0;
-    this.curUpload = 0;
-    this.uploadInterval = 1000;
-
-    this.oldDownload = 0;
-    this.curDownload = 0;
-    this.downloadInterval = 1000;
-
-    this.network = new Network();
-  }
-
-  /**
-   * Returns the difference between the current and old ping
-   * @returns {double} The difference between the current and old ping
-   */
-  diffPing() {
-    return this.curPing - this.oldPing;
+    this.urls = [
+      'https://www.google.com',
+      'https://www.brown.edu',
+      'https://www.github.com',
+      'https://www.linkedin.com',
+      'https://www.facebook.com',
+      'https://www.twitter.com',
+      'https://www.instagram.com',
+      'https://www.reddit.com',
+      'https://www.youtube.com',
+      'https://www.netflix.com',
+      'https://www.amazon.com',
+      'https://www.apple.com',
+      'https://www.microsoft.com',
+      'https://www.spotify.com',
+      'https://www.tiktok.com',
+      'https://www.snapchat.com',
+      'https://www.wikipedia.org',
+      'https://www.stackoverflow.com',
+      'https://www.salesforce.com',
+      'https://www.dropbox.com'
+    ];
   }
 
   /**
    * Initializes the app by creating a ball and starting the animation
    */
   init() {
-    this.createBall();
+    for (const url of this.urls) {
+      this.networks.push(new Network(url));
+      this.createBall();
+    }
+
     this.animate();
 
     /** click events: remove if clicked on ball, add if clicked on canvas */
@@ -121,27 +128,9 @@ class App {
     };
 
     /** intervals: async network processes to do things on the program */
-    setInterval(async () => {
-      let newPing = await this.network.ping();
-      this.oldPing = this.curPing;
-      this.curPing = newPing;
-    }, this.pingInterval);
-
-    setInterval(async () => {
-      let newUpload = await this.network.upload(64 * 64 * 8);
-      this.oldUpload = this.curUpload;
-      this.curUpload = newUpload;
-
-      this.curUpload > this.oldUpload ? this.createBall() : this.popBall();
-    }, this.uploadInterval);
-
-    setInterval(async () => {
-      let newDownload = await this.network.download(64 * 64 * 8);
-      this.oldDownload = this.curDownload;
-      this.curDownload = newDownload;
-
-      this.curDownload > this.oldDownload ? this.createBall() : this.popBall();
-    }, this.downloadInterval);
+    for (const network of this.networks) {
+      network.pingCycle();
+    }
   }
 
   /**
@@ -165,20 +154,31 @@ class App {
    * Draws the ball on the canvas
    * @param {Ball} ball - The ball to draw on the canvas
    */
-  drawBall(ball) {
+  drawBall(ball, network = null) {
     this.ctx.beginPath();
 
-    ball.radius *= this.diffPing() >= 0 ? 1.01 : 0.99;
-    ball.radius = Math.min(ball.maxRadius, ball.radius);
-    ball.radius = Math.max(ball.minRadius, ball.radius);
+    if (network) {
+      ball.radius *= network.pingDiff >= 0 ? 1.01 : 0.99;
+      ball.radius = Math.min(ball.maxRadius, ball.radius);
+      ball.radius = Math.max(ball.minRadius, ball.radius);
+    }
 
     this.ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-    this.ctx.strokeStyle = this.diffPing() >= 0 ? '#00FF00' : '#FF0000';
-    this.ctx.lineWidth = 10;
-
-    this.ctx.stroke();
     this.ctx.fillStyle = ball.color;
     this.ctx.fill();
+
+    if (network) {
+      this.ctx.strokeStyle = network.pingDiff >= 0 ? '#00FF00' : '#FF0000';
+      this.ctx.lineWidth = 10;
+      this.ctx.stroke();
+    }
+
+    if (network) {
+      this.ctx.font = '12px monospace';
+      this.ctx.fillStyle = '#000000';
+      const url = network.pingUrl.substring(12, network.pingUrl.length - 4);
+      this.ctx.fillText(url, ball.x - ball.radius / 2, ball.y);
+    }
 
     this.ctx.closePath();
   }
@@ -210,14 +210,6 @@ class App {
   }
 
   /**
-   * Removes the first ball from the list of balls
-   * @returns {Ball} The first ball in the list
-   */
-  popBall() {
-    this.balls.shift();
-  }
-
-  /**
    * Generates a random color in hex format ("#RRGGBB")
    * @link https://stackoverflow.com/questions/5092808
    * @returns {string} Random color in hex format (#RRGGBB)
@@ -243,26 +235,14 @@ class App {
     this.ctx.font = '12px monospace';
     this.ctx.fillStyle = '#000000';
 
-    const formattedFPS = this.fps.toFixed(2);
-    const formattedPing = this.curPing.toFixed(2);
+    for (const [i, network] of this.networks.entries()) {
+      const ping = network.curPing.toFixed(2);
+      const website = network.pingUrl;
+      const upDown = network.pingDiff >= 0 ? '⬆️' : '⬇️';
+      this.ctx.fillText(`${website} - ${ping} ms ${upDown}`, 10, 20 * (i + 2));
+    }
 
-    const ballsText = `Balls: ${this.balls.length}`;
-    const fpsText = `FPS: ${formattedFPS}`;
-
-    const pingSymbol = this.diffPing() >= 0 ? '↑' : '↓';
-    const pingText = `Ping: ${formattedPing} ms ${pingSymbol}`;
-
-    const uploadSymbol = this.curUpload >= this.oldUpload ? '↑' : '↓';
-    const downloadSymbol = this.curDownload >= this.oldDownload ? '↑' : '↓';
-
-    const uploadText = `Upload: ${this.curUpload} kbps ${uploadSymbol}`;
-    const downloadText = `Download: ${this.curDownload} kbps ${downloadSymbol}`;
-
-    const lines = [ballsText, fpsText, pingText, uploadText, downloadText];
-
-    lines.forEach((line, i) => {
-      this.ctx.fillText(line, 10, 20 * (i + 1));
-    });
+    this.ctx.fillText(`FPS: ${this.fps.toFixed(2)}`, 10, 20);
   }
 
   /**
@@ -272,10 +252,10 @@ class App {
   animate(timestamp = 0) {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-    this.balls.forEach((ball) => {
+    for (const [i, ball] of this.balls.entries()) {
       ball.update(this.canvas);
-      this.drawBall(ball);
-    });
+      this.drawBall(ball, this.networks[i] || null);
+    }
 
     this.updateFPS(timestamp);
     this.drawDebug();
@@ -285,13 +265,12 @@ class App {
 }
 
 class Network {
-  constructor() {
-    this.pingUrl = 'https://www.google.com';
-    this.uploadUrl = 'https://httpbin.org/post';
-    this.downloadUrl = 'https://httpbin.org/stream-bytes/';
-
-    this.uploadSize = 64 * 64 * 8; // 64 KB file
-    this.downloadSize = 64 * 64 * 8; // 64 KB file
+  constructor(url = 'https://www.google.com', pingInterval = 1000) {
+    this.pingUrl = url;
+    this.oldPing = 0;
+    this.curPing = 0;
+    this.pingDiff = 0;
+    this.pingInterval = pingInterval;
   }
 
   /**
@@ -303,7 +282,11 @@ class Network {
       const startTime = performance.now();
       return await fetch(url, { method: 'HEAD', mode: 'no-cors' }).then(() => {
         const endTime = performance.now();
-        return endTime - startTime;
+        const ping = endTime - startTime;
+        this.oldPing = this.curPing;
+        this.curPing = ping;
+        this.pingDiff = this.curPing - this.oldPing;
+        return ping;
       });
     } catch (error) {
       return 0;
@@ -311,33 +294,10 @@ class Network {
   }
 
   /**
-   * Uploads the given number of bits to the server and logs the time (ms) it took to upload
-   * @param {int} numberBits - Number of bits to upload
-   * @returns - Time taken to upload the bits in milliseconds
+   * Pings the given URL every pingInterval milliseconds
    */
-  async upload(numberBits = this.uploadSize) {
-    const bits = new Blob([new ArrayBuffer(numberBits)]);
-
-    const start = new Date().getTime();
-    await fetch('https://httpbin.org/post', {
-      method: 'POST',
-      body: bits
-    });
-    const end = new Date().getTime();
-
-    return end - start;
-  }
-
-  /**
-   * Downloads the given number of bits from the server and logs the time (ms) it took to download
-   * @param {int} numberBits - Number of bits to download
-   * @returns - Time taken to download the bits in milliseconds
-   */
-  async download(numberBits = this.downloadSize) {
-    const start = new Date().getTime();
-    await fetch('https://httpbin.org/stream-bytes/' + numberBits);
-    const end = new Date().getTime();
-
-    return end - start;
+  async pingCycle() {
+    this.ping();
+    setInterval(() => this.ping(), this.pingInterval);
   }
 }
