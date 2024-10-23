@@ -265,7 +265,7 @@ class App {
 }
 
 class Network {
-  constructor(url = 'https://www.google.com', pingInterval = 1000) {
+  constructor(url, pingInterval = 1000) {
     this.pingUrl = url;
     this.oldPing = 0;
     this.curPing = 0;
