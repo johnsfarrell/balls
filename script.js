@@ -153,6 +153,7 @@ class App {
   /**
    * Draws the ball on the canvas
    * @param {Ball} ball - The ball to draw on the canvas
+   * @param {Network} network - The network to draw on the canvas
    */
   drawBall(ball, network = null) {
     this.ctx.beginPath();
@@ -176,8 +177,7 @@ class App {
     if (network) {
       this.ctx.font = '12px monospace';
       this.ctx.fillStyle = '#000000';
-      const url = network.pingUrl.substring(12, network.pingUrl.length - 4);
-      this.ctx.fillText(url, ball.x - ball.radius / 2, ball.y);
+      this.ctx.fillText(network.cleanPingUrl, ball.x - ball.radius / 2, ball.y);
     }
 
     this.ctx.closePath();
@@ -271,6 +271,7 @@ class Network {
     this.curPing = 0;
     this.pingDiff = 0;
     this.pingInterval = pingInterval;
+    this.cleanPingUrl = url.split('.')[1];
   }
 
   /**
